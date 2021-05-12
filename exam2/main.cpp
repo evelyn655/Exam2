@@ -44,6 +44,10 @@ void Gesture_UI(Arguments *in, Reply *out);
 RPCFunction rpcGesture_UI(&Gesture_UI, "Gesture_UI");
 void gesture_ui();
 
+void PLOT(Arguments *in, Reply *out);
+RPCFunction rpcPLOT(&PLOT, "PLOT");
+
+
 void Angle_Detection(Arguments *in, Reply *out);
 RPCFunction rpcAngle_Detection(&Angle_Detection, "Angle_Detection");
 void angle_detection();
@@ -79,6 +83,7 @@ int angle = 15;
 int angle_sel = 15;
 double angle_det = 0.0;
 int gesture_index;
+int gesture_index_array[10];
 
 int num = 0;                                    // num 0: nothing
                                                 // num 1: Gesture_UI mode
@@ -146,7 +151,7 @@ void publish_message2(MQTT::Client<MQTTNetwork, Countdown>* client2) {
         sprintf(buff, "Ring, index = %d",gesture_index );
     } else if (gesture_index==1) {
         sprintf(buff, "Slope, index = %d",gesture_index );
-    } else if (gesture_index==1) {
+    } else if (gesture_index==2) {
         sprintf(buff, "Triangle, index = %d",gesture_index );
     }
     
@@ -307,17 +312,54 @@ void Gesture_UI(Arguments *in, Reply *out) {
     gesture_queue.call(gesture_ui);
 }
 
-int16_t pDataXYZ1[3] = {0};
-int idR[32] = {0};
-int indexR = 0;
-int feature[10];
 
+// int idR[32] = {0};
+// int indexR = 0;
+// int count_bigger;
+// int feature[10];
+int16_t pDataXYZ_init[3] = {0};
+/*
 void record(void) {
-   BSP_ACCELERO_AccGetXYZ(pDataXYZ1);
+    // int16_t pDataXYZ_init[3] = {0};
+    // int16_t pDataXYZ1[3] = {0};
+
+
+
+    int16_t pDataXYZ_init[3] = {0};
+    int16_t pDataXYZ[3] = {0};
+    double mag_A;
+    double mag_B;
+    double cos;
+    double rad_det;
+    //int i;
+
+    count_bigger = 0;
+    for (int i=0; i<32; i++) {
+        BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+        //printf("Angle Detection: %d %d %d\r\n",pDataXYZ[0], pDataXYZ[1], pDataXYZ[2]);
+        mag_A = sqrt(pDataXYZ_init[0]*pDataXYZ_init[0] + pDataXYZ_init[1]*pDataXYZ_init[1] + pDataXYZ_init[2]*pDataXYZ_init[2]);
+        mag_B = sqrt(pDataXYZ[0]*pDataXYZ[0] + pDataXYZ[1]*pDataXYZ[1] + pDataXYZ[2]*pDataXYZ[2]);
+        cos = ((pDataXYZ_init[0]*pDataXYZ[0] + pDataXYZ_init[1]*pDataXYZ[1] + pDataXYZ_init[2]*pDataXYZ[2])/(mag_A)/(mag_B));
+        rad_det = acos(cos);
+        angle_det = 180.0 * rad_det/PI;
+        if (angle_det > 15) {
+            count_bigger++;
+        }
+    }
+    //printf("angle_det = %.2f\r\n", angle_det);
+    //queue.call(print_angle_detect);
+
+//BSP_ACCELERO_AccGetXYZ(pDataXYZ1);
+   
 
    //printf("%d, %d, %d\n", pDataXYZ1[0], pDataXYZ1[1], pDataXYZ1[2]);
 }
-
+*/
+// int idR[32] = {0};
+// int indexR = 0;
+//int count_bigger;
+int feature[10];
+int feature_idx = 0;
 void gesture_ui() {
     NetworkInterface* net = wifi;
     MQTTNetwork mqttNetwork(net);
@@ -358,9 +400,9 @@ void gesture_ui() {
     // int idR[32] = {0};
     // int indexR = 0;
     // BSP_ACCELERO_AccGetXYZ(pDataXYZ);
-    idR[indexR++] = queue.call_every(1ms, record);
-    printf("indexR = %d\r\n", indexR);
-    indexR = indexR % 32;
+    //idR[indexR++] = queue.call_every(1ms, record);
+    //printf("idR[indexR] = %d\r\n", idR[indexR]);
+    //indexR = indexR % 32;
 
     
 
@@ -442,7 +484,31 @@ void gesture_ui() {
     
     num = 1;
     while (num==1) {                                                                // num 1: Gesture_UI mode
+            
+        int16_t pDataXYZ[3] = {0};
+        double mag_A;
+        double mag_B;
+        double cos;
+        double rad_det;
 
+        
+        BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+        //printf("Angle Detection: %d %d %d\r\n",pDataXYZ[0], pDataXYZ[1], pDataXYZ[2]);
+        mag_A = sqrt(pDataXYZ_init[0]*pDataXYZ_init[0] + pDataXYZ_init[1]*pDataXYZ_init[1] + pDataXYZ_init[2]*pDataXYZ_init[2]);
+        mag_B = sqrt(pDataXYZ[0]*pDataXYZ[0] + pDataXYZ[1]*pDataXYZ[1] + pDataXYZ[2]*pDataXYZ[2]);
+        cos = ((pDataXYZ_init[0]*pDataXYZ[0] + pDataXYZ_init[1]*pDataXYZ[1] + pDataXYZ_init[2]*pDataXYZ[2])/(mag_A)/(mag_B));
+        rad_det = acos(cos);
+        angle_det = 180.0 * rad_det/PI;
+        if (angle_det > 15) {
+            feature[feature_idx] = 1;
+        } else {
+            feature[feature_idx] = 0;
+        }
+        //printf("feature = %d\r\n", feature[feature_idx]);
+        if (feature_idx < 9) feature_idx++;
+        else feature_idx = 9;
+    
+    
         // Attempt to read new data from the accelerometer
         got_data = ReadAccelerometer(error_reporter, model_input->data.f,
                                     input_length, should_clear_buffer);
@@ -467,8 +533,13 @@ void gesture_ui() {
         // Clear the buffer next time we read data
         should_clear_buffer = gesture_index < label_num;
 
+        int cnt = 0;
+
         // Produce an output
         if (gesture_index < label_num) {
+            gesture_index_array[cnt] = gesture_index;
+            if (cnt < 9) cnt++;
+            else cnt = 9;
             error_reporter->Report(config.output_message[gesture_index]);
             if (gesture_index == 0) {
             angle = 15;
@@ -490,6 +561,18 @@ void gesture_ui() {
     }
 }
 
+
+void PLOT(Arguments *in, Reply *out) {
+    for (int i=0; i<10; i++) {
+        if (gesture_index_array[i] == 0) {
+            printf("classified gesture events: Ring, extrated fearure: %d"\r\n, feature[i]);
+        } else if (gesture_index_array[i] == 1) {
+            printf("classified gesture events: Slope, extrated fearure: %d"\r\n, feature[i]);
+        } else if (gesture_index_array[i] == 2) {
+            printf("classified gesture events: Triangle, extrated fearure: %d"\r\n, feature[i]);
+        }
+    }
+}
 
 
 
@@ -682,6 +765,7 @@ int main() {
 
     printf("Start accelerometer init\n");
     BSP_ACCELERO_Init();
+    BSP_ACCELERO_AccGetXYZ(pDataXYZ_init);
     btn.rise(mqtt_queue.event(&publish_message1, &client1));
 
 
