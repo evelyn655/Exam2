@@ -62,6 +62,9 @@ Thread mqtt_thread(osPriorityHigh);             // for MQTT
 EventQueue mqtt_queue;
 
 
+EventQueue ACC_DATA_queue(32 * EVENTS_EVENT_SIZE);
+Thread ACC_DATA_thread;
+
 // for MQTT
 // GLOBAL VARIABLES
 WiFiInterface *wifi;
@@ -75,6 +78,7 @@ const char* topic2 = "Angle detection";
 int angle = 15;
 int angle_sel = 15;
 double angle_det = 0.0;
+int gesture_index;
 
 int num = 0;                                    // num 0: nothing
                                                 // num 1: Gesture_UI mode
@@ -137,7 +141,15 @@ void publish_message2(MQTT::Client<MQTTNetwork, Countdown>* client2) {
     MQTT::Message message;
     char buff[300];
     
-    sprintf(buff, "Angle Detected: %.2f degree, which is bigger than the selected angle: %d degree", angle_det, angle_sel);
+    //sprintf(buff, "Angle Detected: %.2f degree, which is bigger than the selected angle: %d degree", angle_det, angle_sel);
+    if (gesture_index==0) {
+        sprintf(buff, "Ring, index = %d",gesture_index );
+    } else if (gesture_index==1) {
+        sprintf(buff, "Slope, index = %d",gesture_index );
+    } else if (gesture_index==1) {
+        sprintf(buff, "Triangle, index = %d",gesture_index );
+    }
+    
     
     message.qos = MQTT::QOS0;
     message.retained = false;
@@ -244,15 +256,15 @@ void print_angle() {
     if (angle==15) {
         uLCD.color(RED);
         uLCD.locate(1, 2);
-        uLCD.printf("\n15\n");
+        uLCD.printf("\nRing\n");
     } else if (angle==45) {
         uLCD.color(RED);
         uLCD.locate(1, 4);
-        uLCD.printf("\n45\n");
+        uLCD.printf("\nSlope\n");
     } else if (angle==60) {
         uLCD.color(RED);
         uLCD.locate(1, 6);
-        uLCD.printf("\n60\n");
+        uLCD.printf("\nTriangle\n");
     } 
 }
 void print_angle_detect() {
@@ -297,7 +309,47 @@ void Gesture_UI(Arguments *in, Reply *out) {
 
 
 void gesture_ui() {
-    num = 1;
+    NetworkInterface* net = wifi;
+    MQTTNetwork mqttNetwork(net);
+    MQTT::Client<MQTTNetwork, Countdown> client2(mqttNetwork);
+
+
+    //TODO: revise host to your IP
+    const char* host = "172.20.10.2";
+    printf("Connecting to TCP network...\r\n");
+
+    SocketAddress sockAddr;
+    sockAddr.set_ip_address(host);
+    sockAddr.set_port(1883);
+
+    printf("address is %s/%d\r\n", (sockAddr.get_ip_address() ? sockAddr.get_ip_address() : "None"),  (sockAddr.get_port() ? sockAddr.get_port() : 0) ); //check setting
+
+    int rc = mqttNetwork.connect(sockAddr);//(host, 1883);
+    if (rc != 0) {
+            printf("Connection error.");
+            //return -1;
+    }
+    printf("Successfully connected!\r\n");
+
+    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+    data.MQTTVersion = 3;
+    data.clientID.cstring = "Angle detection";
+
+    if ((rc = client2.connect(data)) != 0){
+            printf("Fail to connect MQTT\r\n");
+    }
+    if (client2.subscribe(topic2, MQTT::QOS0, messageArrived) != 0){
+            printf("Fail to subscribe\r\n");
+    }    
+
+
+
+    int16_t pDataXYZ[3] = {0};
+    int idR[32] = {0};
+    int indexR = 0;
+    BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+
+    
 
     /*BELOW: Machine Learning on mbed*/
     /*************************************************************************************/
@@ -307,7 +359,7 @@ void gesture_ui() {
     bool should_clear_buffer = false;
     bool got_data = false;
     // The gesture index of the prediction
-    int gesture_index;
+    //int gesture_index;
 
     // Set up logging.
     static tflite::MicroErrorReporter micro_error_reporter;
@@ -375,6 +427,7 @@ void gesture_ui() {
 
     ;
     
+    num = 1;
     while (num==1) {                                                                // num 1: Gesture_UI mode
 
         // Attempt to read new data from the accelerometer
@@ -407,14 +460,17 @@ void gesture_ui() {
             if (gesture_index == 0) {
             angle = 15;
             queue.call(print_angle);
+            mqtt_queue.call(&publish_message2, &client2);
             }
             else if (gesture_index == 1) {
                 angle = 45;
                 queue.call(print_angle);
+                mqtt_queue.call(&publish_message2, &client2);
             }
             else if (gesture_index == 2) {
                 angle = 60;
                 queue.call(print_angle);
+                mqtt_queue.call(&publish_message2, &client2);
             }
 
         }
@@ -422,6 +478,7 @@ void gesture_ui() {
 }
 
 
+/*
 
 void Angle_Detection(Arguments *in, Reply *out) {
     for (int i=0; i<5; i++) {
@@ -518,10 +575,10 @@ void angle_detection() {
         ThisThread::sleep_for(1000ms);
     }
 }
+*/
 /*************************************************************************************/
 /*************************************************************************************/
 /*Above: RPC and thread function*/
-
 
 
 
@@ -547,6 +604,7 @@ int main() {
 
     thread.start(callback(&queue, &EventQueue::dispatch_forever));                          // for output on uLCD
     mqtt_thread.start(callback(&mqtt_queue, &EventQueue::dispatch_forever));
+    ACC_DATA_thread.start(callback(&ACC_DATA_queue, &EventQueue::dispatch_forever));
 
 
 
