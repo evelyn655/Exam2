@@ -246,11 +246,11 @@ void print_angle() {
     uLCD.cls();
     uLCD.color(BLACK);
     uLCD.locate(1, 2);
-    uLCD.printf("\n15\n");    
+    uLCD.printf("\nRing\n");    
     uLCD.locate(1, 4);
-    uLCD.printf("\n45\n");
+    uLCD.printf("\nSlope\n");
     uLCD.locate(1, 6);
-    uLCD.printf("\n60\n");
+    uLCD.printf("\nTriangle\n");
     
 
     if (angle==15) {
@@ -307,6 +307,16 @@ void Gesture_UI(Arguments *in, Reply *out) {
     gesture_queue.call(gesture_ui);
 }
 
+int16_t pDataXYZ1[3] = {0};
+int idR[32] = {0};
+int indexR = 0;
+int feature[10];
+
+void record(void) {
+   BSP_ACCELERO_AccGetXYZ(pDataXYZ1);
+
+   //printf("%d, %d, %d\n", pDataXYZ1[0], pDataXYZ1[1], pDataXYZ1[2]);
+}
 
 void gesture_ui() {
     NetworkInterface* net = wifi;
@@ -344,10 +354,13 @@ void gesture_ui() {
 
 
 
-    int16_t pDataXYZ[3] = {0};
-    int idR[32] = {0};
-    int indexR = 0;
-    BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+    // int16_t pDataXYZ[3] = {0};
+    // int idR[32] = {0};
+    // int indexR = 0;
+    // BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+    idR[indexR++] = queue.call_every(1ms, record);
+    printf("indexR = %d\r\n", indexR);
+    indexR = indexR % 32;
 
     
 
@@ -478,7 +491,7 @@ void gesture_ui() {
 }
 
 
-/*
+
 
 void Angle_Detection(Arguments *in, Reply *out) {
     for (int i=0; i<5; i++) {
@@ -575,7 +588,7 @@ void angle_detection() {
         ThisThread::sleep_for(1000ms);
     }
 }
-*/
+
 /*************************************************************************************/
 /*************************************************************************************/
 /*Above: RPC and thread function*/
