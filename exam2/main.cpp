@@ -565,11 +565,11 @@ void gesture_ui() {
 void PLOT(Arguments *in, Reply *out) {
     for (int i=0; i<10; i++) {
         if (gesture_index_array[i] == 0) {
-            printf("classified gesture events: Ring, extrated fearure: %d"\r\n, feature[i]);
+            printf("classified gesture events: Ring, extrated fearure: %d\r\n", feature[i]);
         } else if (gesture_index_array[i] == 1) {
-            printf("classified gesture events: Slope, extrated fearure: %d"\r\n, feature[i]);
+            printf("classified gesture events: Slope, extrated fearure: %d\r\n", feature[i]);
         } else if (gesture_index_array[i] == 2) {
-            printf("classified gesture events: Triangle, extrated fearure: %d"\r\n, feature[i]);
+            printf("classified gesture events: Triangle, extrated fearure: %d\r\n", feature[i]);
         }
     }
 }
