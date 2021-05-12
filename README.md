@@ -7,7 +7,7 @@ python 端接收到 10 次訊息後，會在 screen 寫入 /Leave_Mode/run，該
 
 ##[ Part II ]
 在 screen 輸入指令 /PLOT/run，呼叫RPC function: PLOT
-在這個 function 裡面，會印出辨識到 10 次的手勢名稱及其 feature
+在這個 function 裡面，會印出辨識到 10 次的手勢名稱及其 feature (該手勢第一個測到的角度是否大於 15度)
 
 並且 uLCD 會顯示相關訊息
 
