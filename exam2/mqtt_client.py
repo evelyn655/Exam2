@@ -31,20 +31,20 @@ def on_message(mosq, obj, msg):
     global flag, count
     print("flag: ", flag)
     num = str(msg.payload)
-    if flag == 0:
+    # if flag == 0:
+    #     print("Message: " + str(msg.payload) + "\n")
+    #     s.write(bytes("/Leave_Mode/run\r\n", 'UTF-8'))
+    #     flag = 1
+    # else:
+    if count != 9:
+        count+=1
+        print("count: ", count)
+        print("Message: " + str(msg.payload) + "\n")
+    else:
         print("Message: " + str(msg.payload) + "\n")
         s.write(bytes("/Leave_Mode/run\r\n", 'UTF-8'))
-        flag = 1
-    else:
-        if count != 9:
-            count+=1
-            print("count: ", count)
-            print("Message: " + str(msg.payload) + "\n")
-        else:
-            print("Message: " + str(msg.payload) + "\n")
-            s.write(bytes("/Leave_Mode/run\r\n", 'UTF-8'))
-            count = 0
-            flag = 0
+        count = 0
+        #flag = 0
 
 def on_subscribe(mosq, obj, mid, granted_qos):
     print("Subscribed OK")
